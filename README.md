@@ -12,14 +12,85 @@ An educational project that progressively implements a fully-featured HTTP serve
 |-------|-------|--------|
 | **1** | Raw TCP socket — client/server handshake | ✅ Done |
 | **2** | HTTP response formatting (status line, headers, body) | ✅ Done |
-| 3 | HTTP request parsing (method, path, headers) | 🔜 Planned |
-| 4 | URL routing & basic GET handler | 🔜 Planned |
+| **3** | HTTP request parsing (method, path, headers) | ✅ Done |
+| **4** | URL routing & dynamic GET handler | ✅ Done |
 | 5 | Static file serving | 🔜 Planned |
 | 6 | Basic concurrency (fork / threads) | 🔜 Planned |
 
 ---
 
+## ✅ Level 4 — URL Routing & Dynamic GET Handler
+
+The server now routes requests based on the URL path and generates **dynamic HTML responses**. Visit `/sriman` and the page greets you by name.
+
+### What changed
+
+- **Route dispatch** — `strcmp` on the parsed path:
+  - `/` → responds with a static `"Hello World"` page
+  - `/<name>` → responds with `"Hello <name>"` (dynamic body built at runtime)
+
+- **Persistent server** — `while(1)` event loop:
+  - Accepts connections in a loop instead of exiting after one request
+  - Properly `free()`s every allocated response buffer before closing each connection
+
+- **Port reuse** — enabled `setsockopt(SO_REUSEADDR)` so the server can restart immediately without `Address already in use` errors
+
+### Concepts covered
+
+- Basic URL routing with `strcmp`
+- Dynamic HTML generation with `snprintf` + `malloc`
+- Iterative server event loop (`while(1)` + `accept`)
+- `SO_REUSEADDR` socket option for fast restarts
+- Heap hygiene — `free()` after every `malloc`
+
+### Demo
+
+```
+# Terminal — start the server
+$ bin/server
+
+# Browser: http://localhost:8080/     → "Hello World"
+# Browser: http://localhost:8080/cat  → "Hello cat"
+# Browser: http://localhost:8080/sriman → "Hello sriman"
+
+# Server stdout:
+/
+Entered default route
+/cat
+Entered cat route
+/sriman
+Entered sriman route
+```
+
+---
+
+## ✅ Level 3 — HTTP Request Parsing
+
+<details>
+<summary>Click to expand</summary>
+
+The server now reads and parses the incoming HTTP request line to extract the URL path, rather than treating the request as an opaque blob.
+
+### What changed
+
+- **Request-line parsing** with `sscanf`:
+  - Extracts the full path (e.g. `/cat`) from `GET /cat HTTP/1.1`
+  - Also extracts the path segment without the leading `/` for use in dynamic content
+
+### Concepts covered
+
+- HTTP request-line format: `METHOD PATH VERSION`
+- `sscanf` with `%*s` (skip) and `%49s` (bounded capture)
+- Separating raw path (`/cat`) from the name segment (`cat`)
+
+</details>
+
+---
+
 ## ✅ Level 2 — HTTP Response Formatting
+
+<details>
+<summary>Click to expand</summary>
 
 The server now speaks HTTP. Instead of sending a raw string, it constructs a proper **HTTP/1.1 response** with status line, headers, and an HTML body — making it viewable in a real browser.
 
@@ -43,23 +114,7 @@ The server now speaks HTTP. Instead of sending a raw string, it constructs a pro
 - Dynamic string formatting with `snprintf(NULL, 0, ...)` to measure first, then write
 - Heap allocation with `malloc` for variable-length responses
 
-### Demo
-
-```
-# Terminal — start the server
-$ bin/server
-
-# Open http://localhost:8080 in a browser → renders "Hello World"
-# Server stdout shows the full incoming request:
-GET / HTTP/1.1
-Host: localhost:8080
-Connection: keep-alive
-User-Agent: Mozilla/5.0 ...
-Accept: text/html,application/xhtml+xml,...
-...
-
-HTTP message sent
-```
+</details>
 
 ---
 
@@ -125,7 +180,7 @@ Binaries are placed in the `bin/` directory (git-ignored).
 ```
 scratch-http-server/
 ├── src/
-│   ├── server.c      # HTTP server (TCP + response formatting)
+│   ├── server.c      # HTTP server (routing, parsing, response formatting)
 │   └── client.c      # TCP client
 ├── Makefile
 └── README.md

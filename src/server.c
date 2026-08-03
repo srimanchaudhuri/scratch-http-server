@@ -51,12 +51,11 @@ int main(int argc, char const *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  //   // Forcefully attaching socket to the port 8080
-  //   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
-  //                  sizeof(opt))) {
-  //     perror("setsockopt");
-  //     exit(EXIT_FAILURE);
-  //   }
+  // Forcefully attaching socket to the port 8080
+  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
+    perror("setsockopt");
+    exit(EXIT_FAILURE);
+  }
 
   address.sin_family = AF_INET;
   address.sin_port = htons(PORT);
@@ -72,20 +71,42 @@ int main(int argc, char const *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  if ((new_sock = accept(sockfd, (struct sockaddr *)&address, &addrlen)) < 0) {
-    perror("Socket acceptance failed");
-    exit(EXIT_FAILURE);
+  while (1) {
+    if ((new_sock = accept(sockfd, (struct sockaddr *)&address, &addrlen)) <
+        0) {
+      perror("Socket acceptance failed");
+      exit(EXIT_FAILURE);
+    }
+
+    valread = read(new_sock, buffer, 1024 - 1);
+    char route[50];
+    char route_string[50];
+    sscanf(buffer, "%*s %49s", route);
+    sscanf(buffer, "%*s /%49s", route_string);
+    printf("%s\n", route);
+
+    if (strcmp("/", route) == 0) {
+      printf("Entered default route\n");
+      char *http_response = create_http_response(body, type, &allocated_size);
+      send(new_sock, http_response, allocated_size, 0);
+      free(http_response);
+      close(new_sock);
+    } else {
+      printf("Entered %s route\n", route_string);
+      char *body_template = "<html><body><h1>Hello </h1></body></html>";
+      size_t body_size = strlen(body_template) + strlen(route_string) - 1;
+      char *body_string = (char *)malloc(body_size);
+      snprintf(body_string, body_size,
+               "<html><body><h1>Hello %s</h1></body></html>", route_string);
+      char *http_response =
+          create_http_response(body_string, type, &allocated_size);
+      send(new_sock, http_response, allocated_size, 0);
+      free(body_string);
+      free(http_response);
+      close(new_sock);
+    }
   }
 
-  valread = read(new_sock, buffer, 1024 - 1);
-  printf("%s\n", buffer);
-
-  char *http_response = create_http_response(body, type, &allocated_size);
-
-  send(new_sock, http_response, allocated_size, 0);
-  printf("HTTP message sent\n");
-
-  close(new_sock);
   close(sockfd);
 
   return 0;
