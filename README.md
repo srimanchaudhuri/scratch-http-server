@@ -14,12 +14,65 @@ An educational project that progressively implements a fully-featured HTTP serve
 | **2** | HTTP response formatting (status line, headers, body) | ✅ Done |
 | **3** | HTTP request parsing (method, path, headers) | ✅ Done |
 | **4** | URL routing & dynamic GET handler | ✅ Done |
-| 5 | Static file serving | 🔜 Planned |
+| **5** | Static file serving | ✅ Done |
 | 6 | Basic concurrency (fork / threads) | 🔜 Planned |
 
 ---
 
+## ✅ Level 5 — Static File Serving
+
+The server now reads real HTML files from disk instead of hardcoding HTML strings in C. The `/` route serves `index.html` — a fully styled landing page for the project.
+
+### What changed
+
+- **New function** — `get_http_content()`:
+  - Opens `../index.html` with `fopen` in binary mode
+  - Measures file size with `fseek` / `ftell`, then `rewind`s
+  - Allocates a buffer with `malloc(file_size + 1)` and reads the entire file with `fread`
+  - Null-terminates the string and returns it (caller frees)
+
+- **Server** (`src/server.c`):
+  - The `/` route now calls `get_http_content()` instead of using a hardcoded string
+  - Dynamic routes (`/<name>`) still generate HTML at runtime
+
+- **Landing page** (`index.html`):
+  - Self-contained HTML + CSS with a dark minimalistic design
+  - Sections: hero, roadmap, features grid, architecture diagram, quick start
+  - No external dependencies — served directly by the C server
+
+### Concepts covered
+
+- File I/O with `fopen`, `fseek`, `ftell`, `rewind`, `fread`, `fclose`
+- Binary vs text mode (`"rb"`)
+- Measuring file size before allocating memory
+- Null-terminating file content for use as a C string
+- Separating content (HTML) from code (C) — the first step toward a real web server
+
+### Demo
+
+```
+# Terminal — start the server
+$ bin/server
+
+# Browser: http://localhost:8080/
+# → serves the styled index.html landing page from disk
+
+# Browser: http://localhost:8080/sriman
+# → still returns dynamic "Hello sriman" HTML
+
+# Server stdout:
+/
+Entered default route
+/sriman
+Entered sriman route
+```
+
+---
+
 ## ✅ Level 4 — URL Routing & Dynamic GET Handler
+
+<details>
+<summary>Click to expand</summary>
 
 The server now routes requests based on the URL path and generates **dynamic HTML responses**. Visit `/sriman` and the page greets you by name.
 
@@ -43,24 +96,7 @@ The server now routes requests based on the URL path and generates **dynamic HTM
 - `SO_REUSEADDR` socket option for fast restarts
 - Heap hygiene — `free()` after every `malloc`
 
-### Demo
-
-```
-# Terminal — start the server
-$ bin/server
-
-# Browser: http://localhost:8080/     → "Hello World"
-# Browser: http://localhost:8080/cat  → "Hello cat"
-# Browser: http://localhost:8080/sriman → "Hello sriman"
-
-# Server stdout:
-/
-Entered default route
-/cat
-Entered cat route
-/sriman
-Entered sriman route
-```
+</details>
 
 ---
 
@@ -180,8 +216,9 @@ Binaries are placed in the `bin/` directory (git-ignored).
 ```
 scratch-http-server/
 ├── src/
-│   ├── server.c      # HTTP server (routing, parsing, response formatting)
+│   ├── server.c      # HTTP server (routing, parsing, file serving)
 │   └── client.c      # TCP client
+├── index.html            # Landing page served at /
 ├── Makefile
 └── README.md
 ```

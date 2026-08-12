@@ -34,6 +34,31 @@ char *create_http_response(const char *body, const char *content_type,
   return response_string;
 }
 
+char *get_http_content() {
+  FILE *http_file = fopen("../index.html", "rb");
+  if (http_file == NULL) {
+    printf("Could not get html");
+    return NULL;
+  }
+
+  fseek(http_file, 0, SEEK_END);
+  long file_size = ftell(http_file);
+  rewind(http_file);
+
+  char *http_string = (char *)malloc(file_size + 1);
+  if (http_string == NULL) {
+    printf("Memory allocation failed");
+    fclose(http_file);
+    return NULL;
+  }
+
+  size_t bytes_read = fread(http_string, 1, file_size, http_file);
+  http_string[bytes_read] = '\0';
+  fclose(http_file);
+
+  return http_string;
+}
+
 int main(int argc, char const *argv[]) {
 
   int sockfd, new_sock;
@@ -42,9 +67,9 @@ int main(int argc, char const *argv[]) {
   char buffer[1024] = {0};
   socklen_t addrlen = sizeof(address);
   int opt = 1;
-  const char *body = "<html><body><h1>Hello World</h1></body></html>";
-  const char *type = "text/html";
   size_t allocated_size = 0;
+
+  const char *type = "text/html";
 
   if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     perror("Socket creation failed");
@@ -87,10 +112,12 @@ int main(int argc, char const *argv[]) {
 
     if (strcmp("/", route) == 0) {
       printf("Entered default route\n");
+      char *body = get_http_content();
       char *http_response = create_http_response(body, type, &allocated_size);
       send(new_sock, http_response, allocated_size, 0);
       free(http_response);
       close(new_sock);
+      free(body);
     } else {
       printf("Entered %s route\n", route_string);
       char *body_template = "<html><body><h1>Hello </h1></body></html>";

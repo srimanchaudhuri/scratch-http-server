@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>scratch-http-server</title>
+  <style>
+    /* ── Reset & Base ──────────────────────────────────────── */
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #161922;
+      --border: #232630;
+      --text: #e4e6ef;
+      --text-muted: #8b8fa3;
+      --accent: #6c63ff;
+      --accent-soft: rgba(108, 99, 255, 0.12);
+      --green: #34d399;
+      --green-soft: rgba(52, 211, 153, 0.12);
+      --amber: #fbbf24;
+      --amber-soft: rgba(251, 191, 36, 0.12);
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Layout ────────────────────────────────────────────── */
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Hero ──────────────────────────────────────────────── */
+    .hero {
+      padding: 96px 0 64px;
+      text-align: center;
+    }
+
+    .hero__badge {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid rgba(108, 99, 255, 0.2);
+      margin-bottom: 24px;
+      animation: fadeDown 0.6s ease-out both;
+    }
+
+    .hero__title {
+      font-size: 2.75rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 16px;
+      animation: fadeDown 0.6s 0.1s ease-out both;
+    }
+
+    .hero__title span {
+      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero__subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 520px;
+      margin: 0 auto 36px;
+      animation: fadeDown 0.6s 0.2s ease-out both;
+    }
+
+    .hero__cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 24px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.15s;
+      animation: fadeDown 0.6s 0.3s ease-out both;
+    }
+
+    .hero__cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(108, 99, 255, 0.35);
+    }
+
+    .hero__cta svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* ── Divider ───────────────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0;
+    }
+
+    /* ── Section ───────────────────────────────────────────── */
+    .section {
+      padding: 56px 0;
+    }
+
+    .section__label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    /* ── Roadmap ───────────────────────────────────────────── */
+    .roadmap {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .roadmap__item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      border-radius: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      transition: border-color 0.2s;
+    }
+
+    .roadmap__item:hover {
+      border-color: rgba(108, 99, 255, 0.3);
+    }
+
+    .roadmap__num {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .roadmap__item--done .roadmap__num {
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .roadmap__item--planned .roadmap__num {
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .roadmap__desc {
+      flex: 1;
+      font-size: 0.9rem;
+    }
+
+    .roadmap__status {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    .roadmap__item--done .roadmap__status {
+      color: var(--green);
+    }
+
+    .roadmap__item--planned .roadmap__status {
+      color: var(--text-muted);
+    }
+
+    /* ── Features ──────────────────────────────────────────── */
+    .features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .feature {
+      padding: 20px;
+      border-radius: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      transition: border-color 0.2s;
+    }
+
+    .feature:hover {
+      border-color: rgba(108, 99, 255, 0.3);
+    }
+
+    .feature__icon {
+      font-size: 1.4rem;
+      margin-bottom: 10px;
+    }
+
+    .feature__title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .feature__text {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* ── Code Block ────────────────────────────────────────── */
+    .code-block {
+      padding: 20px 24px;
+      border-radius: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      overflow-x: auto;
+    }
+
+    .code-block pre {
+      font-family: "SF Mono", "Fira Code", "Cascadia Code", Menlo, Consolas,
+        monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      color: var(--text-muted);
+    }
+
+    .code-block .cmd {
+      color: var(--green);
+    }
+
+    .code-block .comment {
+      color: #555a6e;
+    }
+
+    /* ── Architecture ──────────────────────────────────────── */
+    .arch {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 32px 20px;
+      border-radius: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .arch__node {
+      text-align: center;
+    }
+
+    .arch__box {
+      padding: 12px 22px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .arch__label {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .arch__arrow {
+      color: var(--text-muted);
+      font-size: 1.2rem;
+    }
+
+    /* ── Footer ────────────────────────────────────────────── */
+    .footer {
+      padding: 40px 0;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* ── Animations ────────────────────────────────────────── */
+    @keyframes fadeDown {
+      from {
+        opacity: 0;
+        transform: translateY(-12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ── Responsive ────────────────────────────────────────── */
+    @media (max-width: 560px) {
+      .hero__title {
+        font-size: 2rem;
+      }
+
+      .features {
+        grid-template-columns: 1fr;
+      }
+
+      .arch {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .arch__arrow {
+        transform: rotate(90deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero__badge">Educational Project</div>
+      <h1 class="hero__title"><span>scratch-http-server</span></h1>
+      <p class="hero__subtitle">
+        An HTTP server built from the ground up in C — no frameworks, no libraries,
+        just raw POSIX sockets and the will to understand how the web actually works.
+      </p>
+      <a href="https://github.com/srimanchaudhuri/scratch-http-server" class="hero__cta">
+        <svg viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+        View on GitHub
+      </a>
+    </div>
+  </section>
+
+  <div class="container"><hr class="divider"></div>
+
+  <!-- Roadmap -->
+  <section class="section">
+    <div class="container">
+      <p class="section__label">Roadmap</p>
+      <div class="roadmap">
+        <div class="roadmap__item roadmap__item--done">
+          <div class="roadmap__num">1</div>
+          <div class="roadmap__desc">Raw TCP socket — client / server handshake</div>
+          <div class="roadmap__status">✓ Done</div>
+        </div>
+        <div class="roadmap__item roadmap__item--done">
+          <div class="roadmap__num">2</div>
+          <div class="roadmap__desc">HTTP response formatting — status line, headers, body</div>
+          <div class="roadmap__status">✓ Done</div>
+        </div>
+        <div class="roadmap__item roadmap__item--done">
+          <div class="roadmap__num">3</div>
+          <div class="roadmap__desc">HTTP request parsing — method, path, headers</div>
+          <div class="roadmap__status">✓ Done</div>
+        </div>
+        <div class="roadmap__item roadmap__item--done">
+          <div class="roadmap__num">4</div>
+          <div class="roadmap__desc">URL routing & dynamic GET handler</div>
+          <div class="roadmap__status">✓ Done</div>
+        </div>
+        <div class="roadmap__item roadmap__item--done">
+          <div class="roadmap__num">5</div>
+          <div class="roadmap__desc">Static file serving — read HTML from disk</div>
+          <div class="roadmap__status">✓ Done</div>
+        </div>
+        <div class="roadmap__item roadmap__item--planned">
+          <div class="roadmap__num">6</div>
+          <div class="roadmap__desc">Basic concurrency — fork / threads</div>
+          <div class="roadmap__status">Planned</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="container"><hr class="divider"></div>
+
+  <!-- Features -->
+  <section class="section">
+    <div class="container">
+      <p class="section__label">What's inside</p>
+      <div class="features">
+        <div class="feature">
+          <div class="feature__icon">🔌</div>
+          <div class="feature__title">Raw POSIX Sockets</div>
+          <p class="feature__text">TCP connections from scratch using socket(), bind(), listen(), accept()</p>
+        </div>
+        <div class="feature">
+          <div class="feature__icon">📨</div>
+          <div class="feature__title">HTTP/1.1 Responses</div>
+          <p class="feature__text">Dynamically built status lines, Content-Type, Content-Length headers</p>
+        </div>
+        <div class="feature">
+          <div class="feature__icon">🛤️</div>
+          <div class="feature__title">URL Routing</div>
+          <p class="feature__text">Path-based dispatch — visit /name and get a personalised greeting</p>
+        </div>
+        <div class="feature">
+          <div class="feature__icon">📄</div>
+          <div class="feature__title">Static File Serving</div>
+          <p class="feature__text">Reads HTML files from disk using fopen, fread, and serves them over HTTP</p>
+        </div>
+        <div class="feature">
+          <div class="feature__icon">🔁</div>
+          <div class="feature__title">Persistent Server</div>
+          <p class="feature__text">Event loop handles multiple sequential connections without restarting</p>
+        </div>
+        <div class="feature">
+          <div class="feature__icon">🧹</div>
+          <div class="feature__title">Clean Memory</div>
+          <p class="feature__text">Every malloc'd buffer is freed — no leaks, proper socket cleanup</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="container"><hr class="divider"></div>
+
+  <!-- Architecture -->
+  <section class="section">
+    <div class="container">
+      <p class="section__label">Architecture</p>
+      <div class="arch">
+        <div class="arch__node">
+          <div class="arch__box">Browser</div>
+          <div class="arch__label">GET /path</div>
+        </div>
+        <div class="arch__arrow">→</div>
+        <div class="arch__node">
+          <div class="arch__box" style="border-color: rgba(108,99,255,0.4); color: var(--accent);">server.c</div>
+          <div class="arch__label">parse → route → respond</div>
+        </div>
+        <div class="arch__arrow">→</div>
+        <div class="arch__node">
+          <div class="arch__box">index.html</div>
+          <div class="arch__label">static file</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="container"><hr class="divider"></div>
+
+  <!-- Quick Start -->
+  <section class="section">
+    <div class="container">
+      <p class="section__label">Quick start</p>
+      <div class="code-block">
+        <pre><span class="comment"># Clone & build</span>
+<span class="cmd">$</span> git clone https://github.com/srimanchaudhuri/scratch-http-server.git
+<span class="cmd">$</span> cd scratch-http-server
+<span class="cmd">$</span> make
+
+<span class="comment"># Run the server</span>
+<span class="cmd">$</span> bin/server
+
+<span class="comment"># Open in your browser</span>
+<span class="cmd">→</span> http://localhost:8080
+<span class="cmd">→</span> http://localhost:8080/sriman</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      Built from scratch in C by
+      <a href="https://github.com/srimanchaudhuri">Sriman Chaudhuri</a>
+    </div>
+  </footer>
+
+</body>
+
+</html>
