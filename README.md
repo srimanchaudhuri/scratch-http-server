@@ -2,7 +2,7 @@
 
 > Building an HTTP server from scratch in C — one level at a time.
 
-An educational project that progressively implements a fully-featured HTTP server using raw POSIX sockets, starting from the simplest possible TCP handshake and working up through parsing, routing, concurrency, and beyond.
+A fully-featured HTTP server built from the ground up using raw POSIX sockets — no frameworks, no libraries. Progresses through 6 levels: TCP sockets → HTTP formatting → request parsing → URL routing → static file serving → multi-threaded concurrency.
 
 ---
 
@@ -15,38 +15,35 @@ An educational project that progressively implements a fully-featured HTTP serve
 | **3** | HTTP request parsing (method, path, headers) | ✅ Done |
 | **4** | URL routing & dynamic GET handler | ✅ Done |
 | **5** | Static file serving | ✅ Done |
-| 6 | Basic concurrency (fork / threads) | 🔜 Planned |
+| **6** | Multi-threaded concurrency (pthreads) | ✅ Done |
 
 ---
 
-## ✅ Level 5 — Static File Serving
+## ✅ Level 6 — Multi-Threaded Concurrency
 
-The server now reads real HTML files from disk instead of hardcoding HTML strings in C. The `/` route serves `index.html` — a fully styled landing page for the project.
+The server now handles **multiple clients simultaneously** using POSIX threads. Each incoming connection spawns a dedicated thread, so one slow request no longer blocks every other client.
 
 ### What changed
 
-- **New function** — `get_http_content()`:
-  - Opens `../index.html` with `fopen` in binary mode
-  - Measures file size with `fseek` / `ftell`, then `rewind`s
-  - Allocates a buffer with `malloc(file_size + 1)` and reads the entire file with `fread`
-  - Null-terminates the string and returns it (caller frees)
+- **New thread function** — `send_response(void *arg)`:
+  - Receives a heap-allocated socket fd as its argument
+  - Calls `pthread_detach(pthread_self())` so resources are freed automatically on exit
+  - Handles the full lifecycle: read request → parse route → serve response → close & free
+  - Added NULL checks for template file reads with proper cleanup on failure
 
-- **Server** (`src/server.c`):
-  - The `/` route now calls `get_http_content()` instead of using a hardcoded string
-  - Dynamic routes (`/<name>`) still generate HTML at runtime
-
-- **Landing page** (`index.html`):
-  - Self-contained HTML + CSS with a dark minimalistic design
-  - Sections: hero, roadmap, features grid, architecture diagram, quick start
-  - No external dependencies — served directly by the C server
+- **Main loop** (`main()`):
+  - Allocates the client socket on the heap (`malloc(sizeof(int))`) so each thread owns its own copy
+  - Spawns a new thread per connection with `pthread_create`
+  - Main thread immediately loops back to `accept` the next connection
+  - Moved `buffer`, `valread`, `type`, and `allocated_size` out of `main` and into the thread function
 
 ### Concepts covered
 
-- File I/O with `fopen`, `fseek`, `ftell`, `rewind`, `fread`, `fclose`
-- Binary vs text mode (`"rb"`)
-- Measuring file size before allocating memory
-- Null-terminating file content for use as a C string
-- Separating content (HTML) from code (C) — the first step toward a real web server
+- `pthread_create` for spawning threads
+- `pthread_detach` for fire-and-forget thread management
+- Heap-allocating arguments to avoid data races between threads
+- Thread-local stack variables (each thread gets its own `buffer`, `route`, etc.)
+- Resource cleanup in threaded code — every path frees the socket and allocated memory
 
 ### Demo
 
@@ -54,18 +51,49 @@ The server now reads real HTML files from disk instead of hardcoding HTML string
 # Terminal — start the server
 $ bin/server
 
-# Browser: http://localhost:8080/
-# → serves the styled index.html landing page from disk
+# Open multiple browser tabs simultaneously:
+# http://localhost:8080/       → landing page
+# http://localhost:8080/alice  → "Hello alice"
+# http://localhost:8080/bob    → "Hello bob"
+# All served concurrently — no blocking!
 
-# Browser: http://localhost:8080/sriman
-# → still returns dynamic "Hello sriman" HTML
-
-# Server stdout:
+# Server stdout (interleaved):
 /
 Entered default route
-/sriman
-Entered sriman route
+/alice
+Entered alice route
+/bob
+Entered bob route
 ```
+
+---
+
+## ✅ Level 5 — Static File Serving
+
+<details>
+<summary>Click to expand</summary>
+
+The server now reads real HTML files from disk instead of hardcoding HTML strings in C. The `/` route serves `index.html` — a fully styled landing page for the project.
+
+### What changed
+
+- **New function** — `read_file(filepath)`:
+  - Opens any file with `fopen` in binary mode
+  - Measures file size with `fseek` / `ftell`, then `rewind`s
+  - Allocates a buffer with `malloc(file_size + 1)` and reads the entire file with `fread`
+  - Null-terminates the string and returns it (caller frees)
+
+- **Template engine** — `str_replace(source, placeholder, replacement)`:
+  - Replaces all `{{NAME}}` placeholders in `greeting.html` with the route name
+
+### Concepts covered
+
+- File I/O with `fopen`, `fseek`, `ftell`, `rewind`, `fread`, `fclose`
+- Binary vs text mode (`"rb"`)
+- Measuring file size before allocating memory
+- Separating content (HTML) from code (C)
+
+</details>
 
 ---
 

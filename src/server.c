@@ -1,4 +1,5 @@
 #include <netinet/in.h>
+#include <pthread.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -91,17 +92,70 @@ char *str_replace(const char *source, const char *placeholder,
   return result;
 }
 
+void *send_response(void *arg) {
+
+  pthread_detach(pthread_self());
+
+  size_t allocated_size = 0;
+  const char *type = "text/html";
+  char buffer[1024] = {0};
+  ssize_t valread;
+  int *sock = (int *)arg;
+
+  valread = read(*sock, buffer, 1024 - 1);
+  char route[50];
+  char route_string[50];
+  sscanf(buffer, "%*s %49s", route);
+  sscanf(buffer, "%*s /%49s", route_string);
+  printf("%s\n", route);
+
+  if (strcmp("/", route) == 0) {
+    printf("Entered default route\n");
+    char *body = read_file("../index.html");
+    if (body == NULL) {
+      printf("template not found");
+      close(*sock);
+      free(sock);
+      return NULL;
+    }
+    char *http_response = create_http_response(body, type, &allocated_size);
+    send(*sock, http_response, allocated_size, 0);
+    free(http_response);
+    close(*sock);
+    free(body);
+    free(sock);
+  } else {
+    printf("Entered %s route\n", route_string);
+
+    char *template = read_file("../greeting.html");
+    if (template == NULL) {
+      printf("template not found");
+      close(*sock);
+      free(sock);
+      return NULL;
+    }
+    char *body_string = str_replace(template, "{{NAME}}", route_string);
+    free(template);
+
+    char *http_response =
+        create_http_response(body_string, type, &allocated_size);
+    send(*sock, http_response, allocated_size, 0);
+    free(body_string);
+    free(http_response);
+    close(*sock);
+    free(sock);
+  }
+
+  return NULL;
+}
+
 int main(int argc, char const *argv[]) {
 
   int sockfd, new_sock;
   struct sockaddr_in address;
-  ssize_t valread;
-  char buffer[1024] = {0};
   socklen_t addrlen = sizeof(address);
   int opt = 1;
-  size_t allocated_size = 0;
-
-  const char *type = "text/html";
+  pthread_t http_thread;
 
   if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     perror("Socket creation failed");
@@ -135,35 +189,10 @@ int main(int argc, char const *argv[]) {
       exit(EXIT_FAILURE);
     }
 
-    valread = read(new_sock, buffer, 1024 - 1);
-    char route[50];
-    char route_string[50];
-    sscanf(buffer, "%*s %49s", route);
-    sscanf(buffer, "%*s /%49s", route_string);
-    printf("%s\n", route);
+    int *client_sock = malloc(sizeof(int));
+    *client_sock = new_sock;
 
-    if (strcmp("/", route) == 0) {
-      printf("Entered default route\n");
-      char *body = read_file("../index.html");
-      char *http_response = create_http_response(body, type, &allocated_size);
-      send(new_sock, http_response, allocated_size, 0);
-      free(http_response);
-      close(new_sock);
-      free(body);
-    } else {
-      printf("Entered %s route\n", route_string);
-
-      char *template = read_file("../greeting.html");
-      char *body_string = str_replace(template, "{{NAME}}", route_string);
-      free(template);
-
-      char *http_response =
-          create_http_response(body_string, type, &allocated_size);
-      send(new_sock, http_response, allocated_size, 0);
-      free(body_string);
-      free(http_response);
-      close(new_sock);
-    }
+    pthread_create(&http_thread, NULL, send_response, client_sock);
   }
 
   close(sockfd);

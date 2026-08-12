@@ -407,10 +407,10 @@
           <div class="roadmap__desc">Static file serving — read HTML from disk</div>
           <div class="roadmap__status">✓ Done</div>
         </div>
-        <div class="roadmap__item roadmap__item--planned">
+        <div class="roadmap__item roadmap__item--done">
           <div class="roadmap__num">6</div>
-          <div class="roadmap__desc">Basic concurrency — fork / threads</div>
-          <div class="roadmap__status">Planned</div>
+          <div class="roadmap__desc">Multi-threaded concurrency — pthreads</div>
+          <div class="roadmap__status">✓ Done</div>
         </div>
       </div>
     </div>
@@ -444,9 +444,9 @@
           <p class="feature__text">Reads HTML files from disk using fopen, fread, and serves them over HTTP</p>
         </div>
         <div class="feature">
-          <div class="feature__icon">🔁</div>
-          <div class="feature__title">Persistent Server</div>
-          <p class="feature__text">Event loop handles multiple sequential connections without restarting</p>
+          <div class="feature__icon">⚡</div>
+          <div class="feature__title">Multi-Threaded</div>
+          <p class="feature__text">Each connection spawns a pthread — concurrent clients served simultaneously</p>
         </div>
         <div class="feature">
           <div class="feature__icon">🧹</div>
@@ -471,12 +471,17 @@
         <div class="arch__arrow">→</div>
         <div class="arch__node">
           <div class="arch__box" style="border-color: rgba(108,99,255,0.4); color: var(--accent);">server.c</div>
+          <div class="arch__label">accept → pthread_create</div>
+        </div>
+        <div class="arch__arrow">→</div>
+        <div class="arch__node">
+          <div class="arch__box">thread</div>
           <div class="arch__label">parse → route → respond</div>
         </div>
         <div class="arch__arrow">→</div>
         <div class="arch__node">
-          <div class="arch__box">index.html</div>
-          <div class="arch__label">static file</div>
+          <div class="arch__box">*.html</div>
+          <div class="arch__label">read_file + template</div>
         </div>
       </div>
     </div>
