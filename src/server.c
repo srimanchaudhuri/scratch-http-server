@@ -34,10 +34,10 @@ char *create_http_response(const char *body, const char *content_type,
   return response_string;
 }
 
-char *get_http_content() {
-  FILE *http_file = fopen("../index.html", "rb");
+char *read_file(const char *filepath) {
+  FILE *http_file = fopen(filepath, "rb");
   if (http_file == NULL) {
-    printf("Could not get html");
+    printf("Could not open %s\n", filepath);
     return NULL;
   }
 
@@ -47,7 +47,7 @@ char *get_http_content() {
 
   char *http_string = (char *)malloc(file_size + 1);
   if (http_string == NULL) {
-    printf("Memory allocation failed");
+    printf("Memory allocation failed\n");
     fclose(http_file);
     return NULL;
   }
@@ -57,6 +57,38 @@ char *get_http_content() {
   fclose(http_file);
 
   return http_string;
+}
+
+char *str_replace(const char *source, const char *placeholder,
+                  const char *replacement) {
+  size_t ph_len = strlen(placeholder);
+  size_t rp_len = strlen(replacement);
+
+  // Count occurrences
+  int count = 0;
+  const char *p = source;
+  while ((p = strstr(p, placeholder)) != NULL) {
+    count++;
+    p += ph_len;
+  }
+
+  size_t result_len = strlen(source) + count * (rp_len - ph_len) + 1;
+  char *result = (char *)malloc(result_len);
+  char *dst = result;
+
+  p = source;
+  while (*p) {
+    if (strncmp(p, placeholder, ph_len) == 0) {
+      memcpy(dst, replacement, rp_len);
+      dst += rp_len;
+      p += ph_len;
+    } else {
+      *dst++ = *p++;
+    }
+  }
+  *dst = '\0';
+
+  return result;
 }
 
 int main(int argc, char const *argv[]) {
@@ -112,7 +144,7 @@ int main(int argc, char const *argv[]) {
 
     if (strcmp("/", route) == 0) {
       printf("Entered default route\n");
-      char *body = get_http_content();
+      char *body = read_file("../index.html");
       char *http_response = create_http_response(body, type, &allocated_size);
       send(new_sock, http_response, allocated_size, 0);
       free(http_response);
@@ -120,11 +152,11 @@ int main(int argc, char const *argv[]) {
       free(body);
     } else {
       printf("Entered %s route\n", route_string);
-      char *body_template = "<html><body><h1>Hello </h1></body></html>";
-      size_t body_size = strlen(body_template) + strlen(route_string) - 1;
-      char *body_string = (char *)malloc(body_size);
-      snprintf(body_string, body_size,
-               "<html><body><h1>Hello %s</h1></body></html>", route_string);
+
+      char *template = read_file("../greeting.html");
+      char *body_string = str_replace(template, "{{NAME}}", route_string);
+      free(template);
+
       char *http_response =
           create_http_response(body_string, type, &allocated_size);
       send(new_sock, http_response, allocated_size, 0);
