@@ -226,6 +226,19 @@ Hello from server        ← reply received
 
 ---
 
+## 🐳 Docker
+
+A multi-stage Dockerfile is included to build and run the server in a container.
+
+```bash
+docker build -t scratch-http-server .
+docker run -p 8080:8080 scratch-http-server
+```
+
+The build stage compiles the server with `gcc` and `-lpthread`, then the runtime stage copies just the binary and HTML files into a minimal Ubuntu image.
+
+---
+
 ## 🛠️ Building
 
 Requires `gcc` and `make`.
@@ -244,9 +257,11 @@ Binaries are placed in the `bin/` directory (git-ignored).
 ```
 scratch-http-server/
 ├── src/
-│   ├── server.c      # HTTP server (routing, parsing, file serving)
-│   └── client.c      # TCP client
+│   ├── server.c          # HTTP server (routing, parsing, file serving)
+│   └── client.c          # TCP client
 ├── index.html            # Landing page served at /
+├── greeting.html         # Template for /<name> routes
+├── Dockerfile            # Multi-stage build for containerised deployment
 ├── Makefile
 └── README.md
 ```

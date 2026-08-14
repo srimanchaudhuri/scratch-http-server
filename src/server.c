@@ -15,7 +15,7 @@ char *create_http_response(const char *body, const char *content_type,
   const char *header_template = "HTTP/1.1 200 OK\r\n"
                                 "Content-Type: %s\r\n"
                                 "Content-Length: %zu\r\n"
-                                "/r/n";
+                                "\r\n";
 
   int header_len = snprintf(NULL, 0, header_template, content_type, body_len);
   size_t total_len = header_len + body_len + 1;
